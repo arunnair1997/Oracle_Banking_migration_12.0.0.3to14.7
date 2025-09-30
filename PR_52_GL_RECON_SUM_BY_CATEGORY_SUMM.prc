@@ -1,0 +1,105 @@
+-- PROCEDURE PR_52_GL_RECON_SUM_BY_CATEGORY_SUMM (ARUNN_ADMIN)
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ARUNN_ADMIN"."PR_52_GL_RECON_SUM_BY_CATEGORY_SUMM" (p_branch_code IN VARCHAR2,
+                                                                p_dir         IN VARCHAR2) IS
+  l_file UTL_FILE.FILE_TYPE;
+  l_line VARCHAR2(32767);
+  --p_dir CONSTANT VARCHAR2(100) := 'YOUR_DIR'; -- replace with your Oracle directory object
+  l_filename VARCHAR2(200);
+BEGIN
+  -- Construct filename
+  l_filename := '52_GL_RECON_SUM_BY_CATEGORY_SUMM_' || p_branch_code ||
+                '.csv';
+  l_file     := UTL_FILE.FOPEN(p_dir, l_filename, 'W', 32767);
+  dbms_output.put_line('CHECK1');
+  -- Write header line
+  l_line := 'CATEGORY, PARENT_GL, CATEGORY_NAME, V12CNT, V14CNT';
+  UTL_FILE.PUT_LINE(l_file, l_line);
+  dbms_output.put_line('CHECK2');
+  -- Loop through query result and write lines
+  FOR rec IN (select V12.CATEGORY_NAME, V12.PARENT_GL, v12cnt, v14cnt
+                from (SELECT DECODE(B.CATEGORY,
+                                    '1',
+                                    ' 1 - Asset',
+                                    '2',
+                                    '2 - Liability',
+                                    '3',
+                                    '3 - Income',
+                                    '4',
+                                    '4 - Expense',
+                                    '5',
+                                    '5 - Contingent Asset',
+                                    '6',
+                                    '6 - Contingent Liability',
+                                    '7',
+                                    '7 - Memo',
+                                    '8',
+                                    '8 - Position',
+                                    '9',
+                                    '9 - Position Equivalent') CATEGORY_NAME,
+                             B.parent_gl,
+                             count(*) v12Cnt
+                        FROM UBSPROD.GLTB_GL_BAL@fcubsv12   B,
+                             UBSPROD.GLTM_GLMASTER@fcubsv12 M
+                       WHERE B.GL_CODE = M.GL_CODE
+                         AND (B.PERIOD_CODE, B.FIN_YEAR) in
+                             (select current_period, current_cycle
+                                from UBSPROD.sttm_branch@fcubsv12 sb
+                               where sb.branch_code = p_branch_code)
+                         AND BRANCH_CODE = p_branch_code
+                         AND M.RECORD_STAT = 'O'
+                         AND M.AUTH_STAT = 'A'
+                         and b.leaf = 'Y'
+                       GROUP BY B.CATEGORY, B.PARENT_GL) V12
+                LEFT JOIN (SELECT DECODE(B.CATEGORY,
+                                        '1',
+                                        ' 1 - Asset',
+                                        '2',
+                                        '2 - Liability',
+                                        '3',
+                                        '3 - Income',
+                                        '4',
+                                        '4 - Expense',
+                                        '5',
+                                        '5 - Contingent Asset',
+                                        '6',
+                                        '6 - Contingent Liability',
+                                        '7',
+                                        '7 - Memo',
+                                        '8',
+                                        '8 - Position',
+                                        '9',
+                                        '9 - Position Equivalent') CATEGORY_NAME,
+                                 B.parent_gl,
+                                 count(*) V14cnt
+                            FROM INTEGRATEDPP.GLZB_GL_BAL   B,
+                                 INTEGRATEDPP.GLZM_GLMASTER M
+                           WHERE B.GL_CODE = M.GL_CODE
+                             AND (B.PERIOD_CODE, B.FIN_YEAR) in
+                                 (select current_period, current_cycle
+                                    from integratedpp.stzm_branch sb
+                                   where sb.branch_code = p_branch_code)
+                             AND BRANCH_CODE = p_branch_code
+                             AND M.RECORD_STAT = 'O'
+                             AND M.AUTH_STAT = 'A'
+                             and b.leaf = 'Y'
+                           GROUP BY B.CATEGORY, B.PARENT_GL) V14
+                  ON V14.CATEGORY_NAME = V12.CATEGORY_NAME
+                 AND V14.PARENT_GL = V12.PARENT_GL) LOOP
+    l_line := rec.CATEGORY_NAME || ',' || rec.PARENT_GL || ',' || rec.V12CNT || ',' ||
+              rec.V14CNT;
+    UTL_FILE.PUT_LINE(l_file, l_line);
+  END LOOP;
+  dbms_output.put_line('CHECK3');
+  UTL_FILE.FCLOSE(l_file);
+
+EXCEPTION
+  WHEN OTHERS THEN
+    dbms_output.put_line('BOMBED' || SQLERRM);
+    IF UTL_FILE.IS_OPEN(l_file) THEN
+      UTL_FILE.FCLOSE(l_file);
+    END IF;
+    RAISE;
+END PR_52_GL_RECON_SUM_BY_CATEGORY_SUMM;
+/
+/

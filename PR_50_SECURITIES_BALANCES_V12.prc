@@ -1,0 +1,77 @@
+-- PROCEDURE PR_50_SECURITIES_BALANCES_V12 (ARUNN_ADMIN)
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ARUNN_ADMIN"."PR_50_SECURITIES_BALANCES_V12" (p_dir IN VARCHAR2) IS
+
+  l_file UTL_FILE.FILE_TYPE;
+  l_line VARCHAR2(32767);
+  --p_dir CONSTANT VARCHAR2(100) := 'YOUR_DIR'; -- replace with your Oracle directory object
+  l_filename VARCHAR2(200);
+BEGIN
+  -- Construct filename
+  l_filename := '50_Securities_balances_v12.csv';
+  l_file     := UTL_FILE.FOPEN(p_dir, l_filename, 'W', 32767);
+  dbms_output.put_line('CHECK1');
+  -- Write header line
+  l_line := 'BRANCH_CODE, PORTFOLIO_ID, PORTFOLIO_DESCRIPTION, POSITION_REF_NO, PORTFOLIO_CUSTOMER_ID, CUSTOMER_NAME1, SECURITY_ID, SECURITY_DESCRIPTION, SCY, CCY_NAME, SK_LOCATION_ID, SK_LOCATION_DESC, SK_LOCATION_ACCOUNT, SECURITY_FORM_CODE, CURRENT_POSITION, CURRENT_HOLDING, OPENING_POSITION, OPENING_HOLDING, PORTFOLIO_TYPE';
+  UTL_FILE.PUT_LINE(l_file, l_line);
+  dbms_output.put_line('CHECK2');
+  -- Loop through query result and write lines
+  FOR rec IN (SELECT a.BRANCH_CODE,
+                     a.PORTFOLIO_ID,
+                     b.PORTFOLIO_DESCRIPTION,
+                     a.POSITION_REF_NO,
+                     b.PORTFOLIO_CUSTOMER_ID,
+                     d.CUSTOMER_NAME1,
+                     a.SECURITY_ID,
+                     c.SECURITY_DESCRIPTION,
+                     g.SCY,
+                     e.CCY_NAME,
+                     a.SK_LOCATION_ID,
+                     f.SK_LOCATION_DESC,
+                     a.SK_LOCATION_ACCOUNT,
+                     a.SECURITY_FORM_CODE,
+                     a.CURRENT_POSITION,
+                     a.CURRENT_HOLDING,
+                     a.OPENING_POSITION,
+                     a.OPENING_HOLDING,
+                     b.PORTFOLIO_TYPE
+              --INTERNAL_12.0.1_16654882 Added ends
+                FROM UBSPROD.SETBS_PFOLIO_SKACBALANCES@fcubsv12           a,
+                     UBSPROD.SETMS_PORTFOLIO_MASTER@fcubsv12              b,
+                     UBSPROD.SETMS_SECURITY_MASTER@fcubsv12               c,
+                     UBSPROD.STTMS_CUSTOMER@fcubsv12                      d,
+                     UBSPROD.CYTMS_CCY_DEFN@fcubsv12                      e,
+                     UBSPROD.SETMS_SK_LOCATION@fcubsv12                   f,
+                     ARUNN_ADMIN.SEVW_PFOLIO_BALANCES_SUMMARY_v12 g
+               WHERE b.PORTFOLIO_ID = a.PORTFOLIO_ID
+                 AND g.PORTFOLIO_ID = a.PORTFOLIO_ID
+                 AND g.SECURITY_ID = a.SECURITY_ID
+                 AND c.INTERNAL_SEC_ID = a.SECURITY_ID
+                 AND d.CUSTOMER_NO(+) = b.PORTFOLIO_CUSTOMER_ID
+                 AND e.CCY_CODE = g.SCY
+                 AND f.SK_LOCATION_ID = a.SK_LOCATION_ID
+                 AND b.RECORD_STAT = 'O') LOOP
+    l_line := rec.BRANCH_CODE || ',' || rec.PORTFOLIO_ID || ',' ||
+              rec.PORTFOLIO_DESCRIPTION || ',' || rec.POSITION_REF_NO || ',' ||
+              rec.PORTFOLIO_CUSTOMER_ID || ',' || rec.CUSTOMER_NAME1 || ',' ||
+              rec.SECURITY_ID || ',' || rec.SECURITY_DESCRIPTION || ',' ||
+              rec.SCY || ',' || rec.CCY_NAME || ',' || rec.SK_LOCATION_ID || ',' ||
+              rec.SK_LOCATION_DESC || ',' || rec.SK_LOCATION_ACCOUNT || ',' ||
+              rec.SECURITY_FORM_CODE || ',' || rec.CURRENT_POSITION || ',' ||
+              rec.CURRENT_HOLDING || ',' || rec.OPENING_POSITION || ',' ||
+              rec.OPENING_HOLDING || ',' || rec.PORTFOLIO_TYPE;
+    UTL_FILE.PUT_LINE(l_file, l_line);
+  END LOOP;
+  dbms_output.put_line('CHECK3');
+  UTL_FILE.FCLOSE(l_file);
+
+EXCEPTION
+  WHEN OTHERS THEN
+    dbms_output.put_line('BOMBED' || SQLERRM);
+    IF UTL_FILE.IS_OPEN(l_file) THEN
+      UTL_FILE.FCLOSE(l_file);
+    END IF;
+    RAISE;
+END pr_50_Securities_balances_v12;
+/
+/
