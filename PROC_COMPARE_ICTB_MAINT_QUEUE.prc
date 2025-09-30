@@ -1,0 +1,32 @@
+-- PROCEDURE PROC_COMPARE_ICTB_MAINT_QUEUE (ARUNN_ADMIN)
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ARUNN_ADMIN"."PROC_COMPARE_ICTB_MAINT_QUEUE" as 
+
+ V_ERROR_MSG VARCHAR(4000);
+
+BEGIN
+
+  insert into minus_ICTB_MAINT_QUEUE
+   select * from 
+    (
+    
+select BRN, MAINT_TYPE, MAINT_KEY, TIMESTAMP, STATUS from ubsprod.ICTB_MAINT_QUEUE@fcubsv12
+MINUS
+select BRN, MAINT_TYPE, MAINT_KEY, TIMESTAMP, STATUS from integratedpp.ICZB_MAINT_QUEUE
+
+
+)
+      where rownum < 6;
+  
+  COMMIT;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    V_ERROR_MSG := SQLERRM;
+    INSERT INTO TLOG
+    values
+      ('Bombed due to ' || V_ERROR_MSG || 'for ICTB_MAINT_QUEUE at ' ||
+       systimestamp);
+END;
+/
+/

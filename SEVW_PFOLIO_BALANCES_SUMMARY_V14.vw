@@ -1,0 +1,31 @@
+-- VIEW SEVW_PFOLIO_BALANCES_SUMMARY_V14 (ARUNN_ADMIN)
+
+  CREATE OR REPLACE FORCE EDITIONABLE VIEW "ARUNN_ADMIN"."SEVW_PFOLIO_BALANCES_SUMMARY_V14" ("BRANCH_CODE", "PORTFOLIO_ID", "PORTFOLIO_DESCRIPTION", "PORTFOLIO_TYPE", "SECURITY_ID", "SECURITY_DESCRIPTION", "OPENING_POSITION", "CURRENT_POSITION", "OPENING_HOLDING", "CURRENT_HOLDING", "SCY", "SKL", "CUSTOMER_ACCOUNT", "PORTFOLIO_CUSTOMER_ID", "POSITION_REF_NO", "CUSTOMER_NAME1", "AVAIL_HOLDING") AS 
+  (
+  SELECT
+            a.BRANCH_CODE,
+            a.PORTFOLIO_ID,
+            b.PORTFOLIO_DESCRIPTION,
+            b.PORTFOLIO_TYPE,
+            a.SECURITY_ID,
+            c.SECURITY_DESCRIPTION,
+            a.OPENING_POSITION,
+            a.CURRENT_POSITION,
+            a.OPENING_HOLDING,
+            a.CURRENT_HOLDING,
+            a.SCY,
+      a.SKL,
+            b.CUSTOMER_ACCOUNT,
+            b.PORTFOLIO_CUSTOMER_ID,
+            a.POSITION_REF_NO,
+            d.CUSTOMER_NAME1,
+            (nvl(a.current_holding,0) - nvl(a.current_balance_blocked,0) - nvl(a.unauth_buy_holding,0) - nvl(a.unauth_lodge_holding,0)) "AVAIL_HOLDING" --Bug#32802264
+  FROM  ARUNN_ADMIN.SEVW_PFOLIO_BALANCES_v14 a,
+      integratedpp.SEZM_PORTFOLIO_MASTER  b,
+            integratedpp.SEZM_SECURITY_MASTER   c,
+            TRVW_CUSTOMER_v14          d
+  WHERE b.PORTFOLIO_ID          = a.PORTFOLIO_ID
+    AND     c.INTERNAL_SEC_ID       = a.SECURITY_ID
+    AND     d.CUSTOMER_NO(+)        = b.PORTFOLIO_CUSTOMER_ID
+    )
+;

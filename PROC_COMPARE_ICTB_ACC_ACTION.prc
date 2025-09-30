@@ -1,0 +1,32 @@
+-- PROCEDURE PROC_COMPARE_ICTB_ACC_ACTION (ARUNN_ADMIN)
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ARUNN_ADMIN"."PROC_COMPARE_ICTB_ACC_ACTION" as 
+
+ V_ERROR_MSG VARCHAR(4000);
+
+BEGIN
+
+  insert into minus_ICTB_ACC_ACTION
+   select * from 
+    (
+    
+
+select  BRN, TBL_NAME, KEY_VAL, ACTION, OLD_VAL, NEW_VAL, STATUS, ACC, PROD, AUTH_STAT, BRN_DATE, NODE from ubsprod.ICTB_ACC_ACTION@fcubsv12 where auth_stat='A'
+MINUS
+select  BRN, TBL_NAME, KEY_VAL, ACTION, OLD_VAL, NEW_VAL, STATUS, ACC, PROD, AUTH_STAT, BRN_DATE, NODE from integratedpp.ICZB_ACC_ACTION
+
+)
+      where rownum < 6;
+  
+  COMMIT;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    V_ERROR_MSG := SQLERRM;
+    INSERT INTO TLOG
+    values
+      ('Bombed due to ' || V_ERROR_MSG || 'for ICTB_ACC_ACTION at ' ||
+       systimestamp);
+END;
+/
+/

@@ -1,0 +1,31 @@
+-- PROCEDURE PROC_COMPARE_ICTW_ACC_PR (ARUNN_ADMIN)
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ARUNN_ADMIN"."PROC_COMPARE_ICTW_ACC_PR" as
+
+ V_ERROR_MSG VARCHAR(4000);
+
+BEGIN
+
+  insert into minus_ICTW_ACC_PR
+   select * from 
+    (
+    
+
+select  BRN, ACC, PROD, ACLASS, CCY, CUST, CUST_CAT, PROCESS from ubsprod.ICTW_ACC_PR@fcubsv12  WHERE ACC IN (SELECT CUST_AC_NO FROM ubsprod.STTM_CUST_ACCOUNT@fcubsv12 WHERE RECORD_STAT='O' AND AUTH_STAT='A')
+MINUS
+select BRN, ACC, PROD, ACLASS, CCY, CUST, CUST_CAT, PROCESS from integratedpp.ICZW_ACC_PR
+)
+      where rownum < 6;
+  
+  COMMIT;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    V_ERROR_MSG := SQLERRM;
+    INSERT INTO TLOG
+    values
+      ('Bombed due to ' || V_ERROR_MSG || 'for ICTW_ACC_PR at ' ||
+       systimestamp);
+END;
+/
+/

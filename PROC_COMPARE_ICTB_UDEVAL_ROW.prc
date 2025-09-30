@@ -1,0 +1,33 @@
+-- PROCEDURE PROC_COMPARE_ICTB_UDEVAL_ROW (ARUNN_ADMIN)
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ARUNN_ADMIN"."PROC_COMPARE_ICTB_UDEVAL_ROW" AS
+
+ V_ERROR_MSG VARCHAR(4000);
+
+BEGIN
+
+  insert into minus_ICTB_UDEVAL_ROW
+   select * from 
+    (
+    
+ 
+select COND_KEY, COND_TYPE, PROD, UDE_EFF_DT, UDE_VAL_LIST from ubsprod.ICTB_UDEVAL_ROW@fcubsv12  
+MINUS
+select COND_KEY, COND_TYPE, PROD, UDE_EFF_DT, UDE_VAL_LIST from integratedpp.ICZB_UDEVAL_ROW
+
+
+)
+      where rownum < 6;
+  
+  COMMIT;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    V_ERROR_MSG := SQLERRM;
+    INSERT INTO TLOG
+    values
+      ('Bombed due to ' || V_ERROR_MSG || 'for ICTB_UDEVAL_ROW at ' ||
+       systimestamp);
+END;
+/
+/
