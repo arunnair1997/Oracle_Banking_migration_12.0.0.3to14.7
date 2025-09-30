@@ -1,0 +1,3 @@
+-- Errors while dumping DDL for ARUNN_ADMIN at 2025-09-30 12:34:56.630
+[SEQUENCE] ISEQ$$_1677566 -> GET_DDL error: ORA-31603: object "ISEQ$$_1677566" of type SEQUENCE not found in schema "ARUNN_ADMIN"
+-- End of run.
